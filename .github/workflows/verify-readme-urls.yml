@@ -1,0 +1,24 @@
+name: Verify README URLs
+on:
+  push:
+    branches: [ci/loom-memory-urls-20261123]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Install URL checker dependency
+        run: python3 -m pip install aiohttp
+      - name: Run unchanged upstream URL checker
+        run: python3 verify_urls.py --no-cache --output urls.json
+      - name: Check URL result statuses
+        run: |
+          python3 - <<'PY'
+          import json
+          rows = json.load(open('urls.json'))
+          failures = [row for row in rows if row['status'] not in ('success', 'redirected')]
+          print(json.dumps({'total': len(rows), 'failures': failures}, indent=2))
+          assert rows, 'No URLs checked'
+          assert not failures, 'README contains unreachable URLs'
+          PY
